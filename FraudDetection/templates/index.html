@@ -1,0 +1,41 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Real-Time Fraud Detection</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; }
+        input { margin: 5px; padding: 5px; }
+        button { padding: 10px 20px; }
+        #result { margin-top: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Fraud Detection System</h1>
+    <form id="fraudForm">
+        <input type="number" name="amount" placeholder="Transaction Amount" step="0.01" required><br>
+        <input type="number" name="time" placeholder="Time (0-24)" step="0.01" required><br>
+        <input type="number" name="merchant_risk" placeholder="Merchant Risk (0-1)" step="0.01" required><br>
+        <input type="number" name="user_history" placeholder="User History (1-100)" required><br>
+        <button type="submit">Check Transaction</button>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('fraudForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('result').innerText = 
+                    `Result: ${data.result} (Fraud Probability: ${data.probability}%)`;
+            });
+        });
+    </script>
+</body>
+</html>

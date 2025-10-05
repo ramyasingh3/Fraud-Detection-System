@@ -1,0 +1,135 @@
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: fraud_detection
+      POSTGRES_USER: fraud_user
+      POSTGRES_PASSWORD: fraud_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - fraud_network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - fraud_network
+
+  # Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - fraud_network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    networks:
+      - fraud_network
+
+  # Go Fraud Detection API Service
+  go_api:
+    build:
+      context: ./go_api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=fraud_detection
+      - POSTGRES_USER=fraud_user
+      - POSTGRES_PASSWORD=fraud_password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - USE_ML_GRPC=true
+      - ML_GRPC_ADDR=fraud_ml:50051
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    networks:
+      - fraud_network
+
+  # Fraud Detection ML Service
+  fraud_ml:
+    build:
+      context: ./fraud_ml
+      dockerfile: Dockerfile
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=fraud_detection
+      - POSTGRES_USER=fraud_user
+      - POSTGRES_PASSWORD=fraud_password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    networks:
+      - fraud_network
+
+  # Go Transaction Processor Service
+  go_processor:
+    build:
+      context: ./go_processor
+      dockerfile: Dockerfile
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=fraud_detection
+      - POSTGRES_USER=fraud_user
+      - POSTGRES_PASSWORD=fraud_password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    networks:
+      - fraud_network
+
+  # Web Interface
+  web_interface:
+    build:
+      context: ./web_interface
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://host.docker.internal:8000
+    depends_on:
+      - go_api
+    networks:
+      - fraud_network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  fraud_network:
+    driver: bridge 

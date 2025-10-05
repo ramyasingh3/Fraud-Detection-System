@@ -1,0 +1,145 @@
+syntax = "proto3";
+
+package fraud_detection;
+
+// Fraud Detection Service
+service FraudDetectionService {
+  // Process a transaction and return fraud score
+  rpc ProcessTransaction(TransactionRequest) returns (FraudResponse);
+  
+  // Get fraud score for a transaction
+  rpc GetFraudScore(TransactionRequest) returns (FraudScoreResponse);
+  
+  // Stream real-time fraud alerts
+  rpc StreamFraudAlerts(FraudAlertRequest) returns (stream FraudAlert);
+  
+  // Batch process multiple transactions
+  rpc BatchProcessTransactions(BatchTransactionRequest) returns (BatchFraudResponse);
+}
+
+// Transaction Request
+message TransactionRequest {
+  string transaction_id = 1;
+  string user_id = 2;
+  double amount = 3;
+  int64 timestamp = 4;
+  string merchant_id = 5;
+  double merchant_risk = 6;
+  double location_lat = 7;
+  double location_lon = 8;
+  string device_id = 9;
+  string ip_address = 10;
+  map<string, double> additional_features = 11;
+}
+
+// Fraud Response
+message FraudResponse {
+  string transaction_id = 1;
+  bool is_fraud = 2;
+  double fraud_score = 3;
+  double confidence = 4;
+  repeated string risk_factors = 5;
+  string model_version = 6;
+  int64 processing_time_ms = 7;
+}
+
+// Fraud Score Response
+message FraudScoreResponse {
+  double fraud_score = 1;
+  double confidence = 2;
+  repeated string risk_factors = 3;
+}
+
+// Fraud Alert
+message FraudAlert {
+  string alert_id = 1;
+  string transaction_id = 2;
+  string alert_type = 3;
+  string severity = 4;
+  string description = 5;
+  double confidence_score = 6;
+  int64 timestamp = 7;
+}
+
+// Batch Transaction Request
+message BatchTransactionRequest {
+  repeated TransactionRequest transactions = 1;
+}
+
+// Batch Fraud Response
+message BatchFraudResponse {
+  repeated FraudResponse responses = 1;
+  int64 total_processing_time_ms = 2;
+}
+
+// Fraud Alert Request
+message FraudAlertRequest {
+  string user_id = 1;
+  int64 since_timestamp = 2;
+  int32 max_alerts = 3;
+}
+
+// Model Service
+service ModelService {
+  // Get model metadata
+  rpc GetModelInfo(ModelInfoRequest) returns (ModelInfo);
+  
+  // Update model
+  rpc UpdateModel(ModelUpdateRequest) returns (ModelUpdateResponse);
+  
+  // Get model performance metrics
+  rpc GetModelMetrics(MetricsRequest) returns (ModelMetrics);
+}
+
+// Model Info Request
+message ModelInfoRequest {
+  string model_name = 1;
+  string version = 2;
+}
+
+// Model Info
+message ModelInfo {
+  string model_name = 1;
+  string version = 2;
+  double accuracy = 3;
+  double precision = 4;
+  double recall = 5;
+  double f1_score = 6;
+  repeated string features = 7;
+  string training_date = 8;
+}
+
+// Model Update Request
+message ModelUpdateRequest {
+  string model_name = 1;
+  string version = 2;
+  bytes model_data = 3;
+  map<string, string> metadata = 4;
+}
+
+// Model Update Response
+message ModelUpdateResponse {
+  bool success = 1;
+  string message = 2;
+  string new_version = 3;
+}
+
+// Metrics Request
+message MetricsRequest {
+  string model_name = 1;
+  string version = 2;
+  int64 since_timestamp = 3;
+}
+
+// Model Metrics
+message ModelMetrics {
+  double accuracy = 1;
+  double precision = 2;
+  double recall = 3;
+  double f1_score = 4;
+  int64 total_predictions = 5;
+  int64 true_positives = 6;
+  int64 false_positives = 7;
+  int64 true_negatives = 8;
+  int64 false_negatives = 9;
+} 
