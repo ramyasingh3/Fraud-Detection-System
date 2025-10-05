@@ -1,34 +1,37 @@
 # Fraud Detection System
 
-A comprehensive, real-time fraud detection system built with modern technologies including Python, gRPC, Kafka, Docker, Redis, PostgreSQL, and REST APIs.
+A comprehensive, real-time fraud detection system built with **Go microservices**, featuring modern technologies including gRPC, Kafka, Docker, Redis, PostgreSQL, and REST APIs.
 
 ## 🏗️ Architecture Overview
 
-This system implements a microservices architecture for real-time fraud detection with the following components:
+This system implements a **Go-based microservices architecture** for real-time fraud detection with the following components:
 
 ### Core Services
-- **Fraud API Service** - REST API gateway for transaction processing
-- **ML Service** - gRPC service for fraud detection model inference
-- **Transaction Processor** - Kafka consumer for real-time transaction processing
+- **Go API Service** - REST API gateway for transaction processing (Go)
+- **Go Processor Service** - Kafka consumer for real-time transaction processing (Go)
+- **Python ML Service** - gRPC service for fraud detection model inference
 - **Web Interface** - Modern React dashboard for monitoring and interaction
 
 ### Infrastructure
 - **PostgreSQL** - Primary database for transactions, users, and fraud alerts
 - **Redis** - Caching layer for fast access to recent data
-- **Kafka** - Message streaming for real-time transaction processing
+- **Kafka + Zookeeper** - Message streaming for real-time transaction processing
 - **Docker** - Containerization for easy deployment and scaling
+- **Nginx** - Reverse proxy for web interface
 
 ## 🚀 Technology Stack
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **Backend** | Python 3.11 | Core application logic and ML models |
-| **API Gateway** | FastAPI | High-performance REST API |
-| **Inter-service Communication** | gRPC | High-performance ML service calls |
+| **Backend API** | **Go 1.23** | High-performance REST API and microservices |
+| **Transaction Processor** | **Go 1.23** | Kafka consumer and async processing |
+| **ML Service** | Python 3.11 | Machine learning model inference |
+| **Inter-service Communication** | **gRPC** | High-performance ML service calls |
 | **Message Streaming** | Apache Kafka | Real-time transaction processing |
 | **Database** | PostgreSQL 15 | Persistent storage and analytics |
 | **Caching** | Redis 7 | Fast data access and session management |
 | **Frontend** | React 18 | Modern web interface |
+| **Reverse Proxy** | Nginx | API gateway and static file serving |
 | **Containerization** | Docker | Easy deployment and scaling |
 | **Orchestration** | Docker Compose | Multi-service management |
 
@@ -40,23 +43,24 @@ fraud/
 ├── init.sql                   # Database initialization
 ├── protos/                    # gRPC protocol definitions
 │   └── fraud_detection.proto
-├── fraud_api/                 # REST API service
-│   ├── main.py               # FastAPI application
+├── go_api/                    # Go REST API service
+│   ├── main.go               # Go HTTP server
+│   ├── go.mod                # Go dependencies
 │   ├── Dockerfile            # Container configuration
-│   └── requirements.txt      # Python dependencies
-├── fraud_ml/                  # ML service (gRPC)
+│   └── protos/               # gRPC proto files
+├── go_processor/              # Go Kafka consumer service
+│   ├── main.go               # Go Kafka processor
+│   ├── go.mod                # Go dependencies
+│   └── Dockerfile            # Container configuration
+├── fraud_ml/                  # Python ML service (gRPC)
 │   ├── server.py             # gRPC server
-│   ├── Dockerfile            # Container configuration
-│   └── requirements.txt      # Python dependencies
-├── transaction_processor/      # Kafka consumer service
-│   ├── processor.py          # Transaction processor
 │   ├── Dockerfile            # Container configuration
 │   └── requirements.txt      # Python dependencies
 ├── web_interface/             # React web application
 │   ├── src/                  # React source code
 │   ├── package.json          # Node.js dependencies
 │   ├── Dockerfile            # Container configuration
-│   └── nginx.conf            # Web server configuration
+│   └── nginx.conf            # Nginx configuration
 └── README.md                  # This file
 ```
 
@@ -67,15 +71,17 @@ fraud/
 - **Real-time Scoring** - Sub-second fraud detection response times
 - **Risk Factor Analysis** - Identifies specific risk factors for each transaction
 
-### High Performance
+### High Performance Go Services
+- **Go HTTP Server** - High-performance REST API with goroutines
 - **gRPC Communication** - Fast inter-service communication
 - **Redis Caching** - Sub-millisecond response times for cached data
-- **Async Processing** - Non-blocking transaction processing
+- **Async Processing** - Non-blocking transaction processing with Go channels
 
 ### Scalability
-- **Microservices Architecture** - Independent scaling of services
+- **Microservices Architecture** - Independent scaling of Go services
 - **Kafka Streaming** - Handle high-volume transaction streams
 - **Docker Containers** - Easy horizontal scaling
+- **Go Concurrency** - Efficient resource utilization with goroutines
 
 ### Monitoring & Analytics
 - **Real-time Dashboard** - Live fraud detection statistics
@@ -91,8 +97,8 @@ fraud/
 
 ### 1. Clone and Setup
 ```bash
-git clone <repository-url>
-cd fraud
+git clone https://github.com/ramyasingh3/Fraud-Detection-System.git
+cd Fraud-Detection-System
 ```
 
 ### 2. Start the System
@@ -103,20 +109,19 @@ docker-compose up -d
 This will start all services:
 - PostgreSQL database on port 5432
 - Redis cache on port 6379
-- Kafka on port 9092
-- Fraud API on port 8000
+- Kafka + Zookeeper on port 9092
+- Go API service on port 8000
 - Web interface on port 3000
 
 ### 3. Access the System
 - **Web Dashboard**: http://localhost:3000
-- **API Documentation**: http://localhost:8000/docs
-- **Health Check**: http://localhost:8000/health
+- **API Health Check**: http://localhost:8000/health
+- **API Endpoints**: http://localhost:8000/
 
 ### 4. Process Your First Transaction
 1. Open the web interface at http://localhost:3000
-2. Navigate to "Process Transaction"
-3. Fill in transaction details
-4. Submit to get real-time fraud detection results
+2. Fill in transaction details (user_id, amount, merchant_id, etc.)
+3. Submit to get real-time fraud detection results
 
 ## 🔧 Configuration
 
@@ -130,6 +135,8 @@ environment:
   - POSTGRES_PASSWORD=fraud_password
   - REDIS_HOST=redis
   - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+  - USE_ML_GRPC=true
+  - ML_GRPC_ADDR=fraud_ml:50051
 ```
 
 ### Database Configuration
@@ -150,13 +157,11 @@ POST /transactions/process
 Content-Type: application/json
 
 {
-  "user_id": "USER001",
+  "user_id": "U1",
   "amount": 1500.00,
-  "merchant_id": "MERCH001",
+  "merchant_id": "M1",
   "merchant_risk": 0.3,
-  "location_lat": 40.7128,
-  "location_lon": -74.0060,
-  "device_id": "DEVICE001",
+  "device_id": "D1",
   "ip_address": "192.168.1.1"
 }
 ```
@@ -174,6 +179,23 @@ GET /alerts?status=OPEN&limit=100
 ### User Risk Score
 ```http
 GET /users/{user_id}/risk-score
+```
+
+### Batch Processing
+```http
+POST /transactions/batch
+Content-Type: application/json
+
+{
+  "transactions": [
+    {
+      "user_id": "U1",
+      "amount": 100.00,
+      "merchant_id": "M1",
+      "merchant_risk": 0.2
+    }
+  ]
+}
 ```
 
 ## 🧠 Machine Learning Model
@@ -194,25 +216,28 @@ GET /users/{user_id}/risk-score
 - **Response Time**: < 100ms average
 - **Throughput**: 1000+ transactions/second
 - **Caching**: Redis-based result caching
+- **gRPC Integration**: Fast communication between Go API and Python ML
 
 ## 🔄 Data Flow
 
 ```
-Transaction Input → API Gateway → ML Service (gRPC) → Fraud Detection
+Transaction Input → Nginx → Go API → ML Service (gRPC) → Fraud Detection
                                       ↓
-                              Kafka Stream → Transaction Processor
+                              Kafka Stream → Go Processor
                                       ↓
                               Database + Cache + Alerts
 ```
 
-1. **Transaction Submission** - User submits transaction via web interface or API
-2. **Feature Engineering** - System calculates risk factors and features
-3. **ML Inference** - gRPC call to ML service for fraud scoring
-4. **Result Caching** - Store result in Redis for fast subsequent access
-5. **Kafka Streaming** - Send transaction to real-time processing pipeline
-6. **Pattern Detection** - Identify unusual transaction patterns
-7. **Alert Generation** - Create fraud alerts for suspicious activity
-8. **Database Storage** - Persist all data for analytics and compliance
+1. **Transaction Submission** - User submits transaction via React web interface
+2. **Nginx Proxy** - Routes request to Go API service
+3. **Go API Processing** - Validates input and prepares features
+4. **ML Inference** - gRPC call to Python ML service for fraud scoring
+5. **Result Caching** - Store result in Redis for fast subsequent access
+6. **Kafka Streaming** - Send transaction to real-time processing pipeline
+7. **Go Processor** - Consumes Kafka messages and updates database
+8. **Pattern Detection** - Identify unusual transaction patterns
+9. **Alert Generation** - Create fraud alerts for suspicious activity
+10. **Database Storage** - Persist all data for analytics and compliance
 
 ## 📈 Monitoring & Analytics
 
@@ -231,7 +256,7 @@ Transaction Input → API Gateway → ML Service (gRPC) → Fraud Detection
 ## 🔒 Security Features
 
 ### Data Protection
-- **Input Validation** - Comprehensive input sanitization
+- **Input Validation** - Comprehensive input sanitization in Go
 - **SQL Injection Prevention** - Parameterized queries
 - **Rate Limiting** - API request throttling
 - **Secure Communication** - gRPC with TLS (production ready)
@@ -245,14 +270,15 @@ Transaction Input → API Gateway → ML Service (gRPC) → Fraud Detection
 
 ### Horizontal Scaling
 ```bash
-# Scale API service
-docker-compose up -d --scale fraud_api=3
+# Scale Go API service
+docker-compose up -d --scale go_api=3
 
 # Scale ML service
 docker-compose up -d --scale fraud_ml=2
 ```
 
 ### Performance Optimization
+- **Go Concurrency** - Efficient goroutine usage
 - **Connection Pooling** - Database connection management
 - **Async Processing** - Non-blocking I/O operations
 - **Result Caching** - Redis-based response caching
@@ -271,7 +297,8 @@ The system can handle:
 #### Service Won't Start
 ```bash
 # Check service logs
-docker-compose logs fraud_api
+docker-compose logs go_api
+docker-compose logs go_processor
 docker-compose logs fraud_ml
 
 # Check service status
@@ -283,8 +310,8 @@ docker-compose ps
 # Verify PostgreSQL is running
 docker-compose exec postgres psql -U fraud_user -d fraud_detection
 
-# Check connection from service
-docker-compose exec fraud_api python -c "import psycopg2; print('DB OK')"
+# Check connection from Go service
+docker-compose exec go_api /bin/sh -c "echo 'DB connection test'"
 ```
 
 #### Kafka Issues
@@ -294,6 +321,15 @@ docker-compose exec kafka kafka-topics --list --bootstrap-server localhost:9092
 
 # Check consumer groups
 docker-compose exec kafka kafka-consumer-groups --list --bootstrap-server localhost:9092
+```
+
+#### gRPC Issues
+```bash
+# Check if ML service is responding
+docker-compose exec fraud_ml python -c "import grpc; print('gRPC OK')"
+
+# Check Go API gRPC connection
+docker-compose logs go_api | grep -i grpc
 ```
 
 ### Health Checks
@@ -326,8 +362,8 @@ docker-compose exec redis redis-cli ping
 ## 📚 Additional Resources
 
 ### Documentation
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [gRPC Python Guide](https://grpc.io/docs/languages/python/)
+- [Go Documentation](https://golang.org/doc/)
+- [gRPC Go Guide](https://grpc.io/docs/languages/go/)
 - [Apache Kafka Documentation](https://kafka.apache.org/documentation/)
 - [Redis Documentation](https://redis.io/documentation)
 
@@ -358,4 +394,4 @@ For support and questions:
 
 ---
 
-**Built with ❤️ for secure, scalable fraud detection** 
+**Built with ❤️ using Go microservices for secure, scalable fraud detection**
